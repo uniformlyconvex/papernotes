@@ -1,0 +1,201 @@
+% GENERAL SHORTHAND AND TOOLS BELONG HERE
+
+% PROOF TOOLS
+% Refer to numbered part of theorem
+\newcounter{romandummy}
+\newcommand{\refnum}[1]{\setcounter{romandummy}{#1}(\roman{romandummy})}
+\newcommand{\proofimplies}[2]{\refnum{#1}$\Rightarrow$\refnum{#2}}
+\newcommand{\proofiff}[2]{\refnum{#1}$\Leftrightarrow$\refnum{#2}}
+% Proof outline instead of full proof
+\newenvironment{proofoutline}%
+    {\begin{proof}[Proof outline]}{\end{proof}}
+\newcommand{\contradiction}{\ensuremath{\lightning}}
+\newcommand{\lhs}{left-hand side}
+\newcommand{\rhs}{right-hand side}
+\newcommand{\Wlog}{without loss of generality,}
+\newcommand{\WLOG}{Without loss of generality,}
+\newcommand{\TFAE}{TFAE}
+\newcommand{\tfae}{TFAE}
+\newcommand{\claim}[1]{\tcbsubtitle{\textbf{Claim: }#1}}
+
+% FONTS AND HIGHLIGHTING CHOICES
+\newcommand{\definedword}[1]{\textcolor{definitionColor}{\textit{#1}}}
+\renewcommand{\frak}[1]{\ensuremath{\mathfrak{#1}}}
+\newcommand{\curly}[1]{\mathcal{#1}} % Curly letters
+
+% ACCENTS
+\newcommand{\overbar}[1]{\mkern 1.5mu\overline{\mkern-1.5mu#1\mkern-1.5mu}\mkern 1.5mu} % Better bar over letters
+\newlength{\dhatheight}
+\newcommand{\hhat}[1]{\settoheight{\dhatheight}{\ensuremath{\hat{#1}}}%
+                      \addtolength{\dhatheight}{-0.2ex}%
+                      \hat{\vphantom{\rule{1pt}{\dhatheight}}%
+                      \smash{\hat{#1}}}} % Double hat
+\newcommand{\conjbar}[1]{\overbar{#1}}
+\newcommand{\conjstar}[1]{{#1}^*}
+\newcommand{\conj}[1]{\conjbar{#1}}
+
+% COMMON SETS AND MATRIX GROUPS
+\renewcommand{\emptyset}{\varnothing}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\K}{\mathbb{K}}
+\newcommand{\F}{\mathbb{F}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Z}{\mathbb{Z}}
+
+\newcommand{\gGL}{\mathrm{GL}}
+\newcommand{\gPGL}{\mathrm{PGL}}
+\newcommand{\gSL}{\mathrm{SL}}
+\newcommand{\gPSL}{\mathrm{PSL}}
+\newcommand{\gO}{\mathrm{O}}
+\newcommand{\gSO}{\mathrm{SO}}
+\newcommand{\gU}{\mathrm{U}}
+\newcommand{\gPSU}{\mathrm{PSU}}
+\newcommand{\gSU}{\mathrm{SU}}
+\newcommand{\gSp}{\mathrm{Sp}}
+
+\newcommand{\lGL}{\mathfrak{gl}}
+
+\DeclareMathOperator{\Sym}{Sym}
+\DeclareMathOperator{\image}{Im}
+\DeclareMathOperator{\kernel}{Ker}
+
+% BRACKETS
+\forcecommand{\abs}[1]{\left\lvert#1\right\rvert}
+\newcommand{\ceil}[1]{\left\lceil#1\right\rceil}
+\newcommand{\floor}[1]{\left\lfloor#1\right\rfloor}
+\newcommand{\fractional}[1]{\left\lbrace#1\right\rbrace}
+\newcommand{\inp}[1]{\left\langle{#1}\right\rangle}
+\forcecommand{\norm}[1]{\left\lVert#1\right\rVert}
+\newcommand{\restr}[2]{{\left.\kern-\nulldelimiterspace#1\vphantom{|}\right|_{#2}}}
+\newcommand{\set}[1]{\left\lbrace#1\right\rbrace}
+\newcommand{\spn}[1]{\left\langle#1\right\rangle}
+
+% COMMON FUNCTIONS
+\DeclareMathOperator{\id}{id}
+\newcommand{\indicator}{\mathbbm{1}}
+\newcommand{\bigoh}{O}
+\newcommand{\littleoh}{o}
+\DeclareMathOperator{\lcm}{lcm}
+\DeclareMathOperator{\sign}{sgn}
+\DeclareMathOperator{\sgn}{sgn}
+\let\Re\relax\DeclareMathOperator{\Re}{Re}
+\let\Im\relax\DeclareMathOperator{\Im}{Im}
+
+% RELATIONS
+\newcommand{\divides}{\mid}
+\newcommand{\notdivides}{\centernot\divides}
+\newcommand{\isomorphic}{\cong}
+\newcommand{\homeomorphic}{\simeq}
+
+% ARROWS
+\newcommand{\injto}{\hookrightarrow}
+\newcommand{\longinjto}{\lhook\joinrel\longrightarrow}
+\newcommand{\surjto}{\twoheadrightarrow}
+\newcommand{\longto}{\longrightarrow}
+\newcommand{\isomto}{\overset{\sim}{\to}}
+\newcommand{\notto}{\centernot\to}
+
+% SET OPERATIONS
+\newcommand{\powerset}[1]{\mathcal{P}(#1)}
+\newcommand{\comp}{C}
+\newcommand{\symdiff}{\triangle}
+\newcommand{\ind}{\mathbbm{1}}
+
+% TOPOLOGY
+\newcommand{\interior}[1]{\mathrm{Int}\,#1}
+\newcommand{\closure}[1]{\overbar{#1}}
+\newcommand{\homotopic}{\simeq}
+\DeclareMathOperator{\rel}{rel}
+\newcommand{\pathinv}[1]{\overbar{#1}}
+
+% ANALYSIS AND MEASURE THEORY
+\newcommand{\at}[1]{\big|_{#1}}
+\newcommand{\At}[1]{\Big|_{#1}}
+\newcommand{\diff}{\mathrm{d}}
+\newcommand{\eps}{\varepsilon}
+\newcommand{\openb}[2]{B_{#1}\left(#2\right)}
+\newcommand{\closedb}[2]{\overbar{B}_{#1}\left(#2\right)}
+\newcommand{\borel}{\curly{B}}
+
+% ALGEBRA
+\DeclareMathOperator{\ccl}{ccl}
+\DeclareMathOperator{\orbit}{Orb}
+\DeclareMathOperator{\stab}{Stab}
+\newcommand{\groupgen}[1]{\langle#1\rangle}
+\newcommand{\subgroup}{\leq}
+\newcommand{\normalin}{\vartriangleleft}
+\newcommand{\normalni}{\vartriangleright}
+\newcommand{\groupindex}[2]{\left\lvert{#1}:{#2}\right\rvert}
+\DeclareMathOperator{\Aut}{Aut}
+\DeclareMathOperator{\Out}{Out}
+\DeclareMathOperator{\Inn}{Inn}
+\DeclareMathOperator{\End}{End}
+\DeclareMathOperator{\Aff}{Aff}
+\DeclareMathOperator{\Diff}{Diff}
+\DeclareMathOperator{\Syl}{Syl}
+\DeclareMathOperator{\ord}{ord}
+% Cycle notation
+\ExplSyntaxOn
+\NewDocumentCommand{\cycle}{ O{\;} m}
+{
+    (
+    \alec_cycle:nn { #1 } { #2 }
+    )
+}
+\seq_new:N \l_alec_cycle_seq
+\cs_new_protected:Npn \alec_cycle:nn #1 #2
+{
+    \seq_set_split:Nnn \l_alec_cycle_seq { , } { #2 }
+    \seq_use:Nn \l_alec_cycle_seq { #1 }
+}
+\ExplSyntaxOff
+
+% Ringy things
+\newcommand{\idealgen}[1]{\left\langle#1\right\rangle}
+\newcommand{\idealof}{\vartriangleleft}
+
+% Moduley things
+\newcommand{\modulegen}[1]{\left\langle#1\right\rangle}
+\DeclareMathOperator{\Ann}{Ann}
+
+
+% LINEAR ALGEBRA
+\DeclareMathOperator{\adj}{adj}
+\let\det\relax\DeclareMathOperator{\det}{det}
+\DeclareMathOperator{\diag}{diag}
+\let\trace\relax\DeclareMathOperator{\trace}{tr}
+\newcommand{\trans}{\intercal}
+\newcommand{\mat}[1]{\begin{pmatrix}#1\end{pmatrix}}
+\newcommand{\vmat}[1]{\begin{vmatrix}#1\end{vmatrix}}
+\newcommand{\vect}[1]{\boldsymbol{#1}}
+
+% PROBABILITY
+\newcommand{\E}{\mathbb{E}}
+\renewcommand{\P}{\mathbb{P}}
+\let\var\relax\DeclareMathOperator{\var}{Var}
+\DeclareMathOperator{\Cov}{Cov}
+\newcommand{\distributed}{\sim}
+\newcommand{\given}{\mid}
+\newcommand{\iid}{i.i.d.}
+\DeclareMathOperator{\Bernoulli}{Bernoulli}
+
+% GRAPH THEORY
+\DeclareMathOperator{\diam}{diam}
+
+% GEOMETRY
+\newcommand{\RP}{\mathbb{RP}}
+
+% SL
+\DeclareMathOperator{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator{\Var}{Var}
+\newcommand{\defeq}{\coloneq}
+\newcommand{\grad}{\nabla}
+\newcommand{\Normal}{\mathcal{N}}
+\newcommand{\pder}[2][]{\frac{\partial #1}{\partial #2}}
+
+
+\newcommand\independent{\protect\mathpalette{\protect\independenT}{\perp}}
+\def\independenT#1#2{\mathrel{\rlap{$#1#2$}\mkern2mu{#1#2}}}

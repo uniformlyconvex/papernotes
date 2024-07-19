@@ -1,0 +1,549 @@
+% GENERAL DOCUMENT SETUP
+\usepackage[top = 1.5cm,
+            bottom = 1.5cm,
+            left = 2cm,
+            right = 2cm,
+            headsep = 10pt,
+            a4paper]{geometry}
+\usepackage[english]{babel}
+\usepackage[none]{hyphenat}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[parfill]{parskip}
+
+% MISC TOOLS
+\usepackage{xparse}
+\usepackage{xspace}
+\usepackage{calc}
+\usepackage{listings}
+
+\makeatletter
+\@addtoreset{chapter}{part}
+\makeatother
+% Forcibly redefine a command, whether or not it exists
+\newcommand{\forcecommand}[1]{\providecommand{#1}{}\renewcommand{#1}}
+
+% LISTS, TABLES, FIGURES
+\usepackage{enumitem}
+    \setlist{nolistsep}
+    \setlist[enumerate, 1]{label={\arabic*.}} % Default enumerate list is Arabic numbering
+    \setlist[enumerate]{topsep=0pt}
+\usepackage{tabularx}
+\usepackage{booktabs}
+
+% GENERAL GRAPHICS AND FIGURES
+\usepackage{graphicx}
+\usepackage{tikz}
+    \usepackage{tikz-3dplot, tkz-graph, tkz-berge}
+    \usepackage{tikz-cd}
+\usepackage{pstricks, pst-node, pst-plot}
+\usepackage{float}
+\usepackage{subcaption}
+
+% CUSTOM COLORS
+\newlength{\tcbBorderWidth}\setlength{\tcbBorderWidth}{3pt}
+\definecolor{definitionColor}{RGB}{31,117,254} % xcolor already loaded
+\definecolor{resultColor}{RGB}{209,17,65}
+\colorlet{resultBackColor}{black!5}
+\definecolor{exampleColor}{RGB}{0,177,89}
+\colorlet{exampleBackColor}{black!0}
+\definecolor{exerciseColor}{RGB}{0,177,89}
+\colorlet{exerciseBackColor}{black!0}
+\colorlet{problemColor}{black!50}
+\colorlet{problemBackColor}{black!10}
+\definecolor{theme}{RGB}{31,117,254}
+
+
+% MATH PACKAGES
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{stmaryrd}
+\usepackage{centernot}
+\usepackage{bbm}
+\usepackage{cancel}
+\usepackage{mathtools}
+
+% APPEARANCE
+% Title formats
+\usepackage[compact]{titlesec}
+	\titleformat{\chapter}[hang]{\Huge\sffamily\bfseries}{\hspace*{-30pt}\thechapter\hspace{10pt}\textcolor{theme!50}{\raisebox{-2.5pt}{\HUGE|}}\hspace{10pt}}{0pt}{\Huge\sffamily\bfseries}
+	\titlespacing*{\chapter}{0pt}{-30pt}{20pt}
+	\titlespacing*{\section}{}{0pt}{20pt}
+% Headers and footers
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{\sffamily\normalsize\thechapter.\ #1}{}} % Chapter text font settings
+\renewcommand{\sectionmark}[1]{\markright{\sffamily\normalsize\thesection\hspace{5pt}#1}{}} % Section text font settings
+\fancyhf{}
+\fancyhead[LE]{\leftmark} % Nearest section name on left side of even pages
+\fancyhead[RO]{\rightmark} % Current chapter name on right side of odd pages
+\renewcommand{\headrulewidth}{0.5pt} % Width of rule under header
+\addtolength{\headheight}{2.5pt} % Increase spacing around header
+\renewcommand{\footrulewidth}{0pt} % No footer rule
+\fancypagestyle{plain}{\fancyhead{}\renewcommand{\headrulewidth}{0pt}} % Style for plain pages
+\fancyfoot[LE,RO]{\sffamily\normalsize\thepage}
+% Remove header from odd empty pages at end of chapters
+\makeatletter
+\renewcommand{\cleardoublepage}{
+    \clearpage\ifodd\c@page\else
+    \hbox{}
+    \vspace*{\fill}
+    \thispagestyle{empty}
+    \newpage
+    \fi}
+
+% MARGIN NOTES
+\usepackage{marginnote}
+    \setlength\marginparwidth{2cm}
+\usepackage{changepage}
+    \strictpagecheck
+
+\makeatletter
+\newcommand{\marparleft}[1]{
+\checkoddpage
+\ifoddpage{\reversemarginpar\marginnote[#1]{}}
+\else{\normalmarginpar\marginnote[#1]{}}
+\fi
+}
+
+\newcommand{\marparright}[1]{
+\checkoddpage
+\ifoddpage{\normalmarginpar\marginnote{#1}}
+\else{\reversemarginpar\marginnote{#1}}
+\fi
+}
+
+\newcounter{LectureNumber}
+\newcommand{\lecnumstyle}[1]{\marparleft{L{#1}}}
+\newcommand{\lecturenumber}{\stepcounter{LectureNumber}\lecnumstyle{\theLectureNumber}}
+
+% FONTS
+\usepackage{avant} % Avant for headings
+%\usepackage{sansmathsfonts}
+%\usepackage{newpxtext,newpxmath}
+%\renewcommand*\familydefault{\sfdefault}
+\usepackage{moresize}
+%\renewcommand{\sffamily}{\rmmfamily}
+
+% BIBLIOGRAPHY AND INDEX
+\usepackage[style = numeric,
+            citestyle = numeric,
+            sorting = nyt,
+            sortcites = true,
+            autopunct = true,
+            autolang = hyphen,
+            hyperref = true,
+            abbreviate = false,
+            backref = true,
+            backend = biber]{biblatex}
+%\defbibheading{bibempty}{}
+\usepackage{csquotes}
+\usepackage{makeidx} % To make index
+    %\makeindex % Tells LaTeX to create index files
+
+% SECTION NUMBERING IN MARGIN
+\makeatletter
+\renewcommand{\@seccntformat}[1]{\llap{\textcolor{theme}{\csname the#1\endcsname}\hspace{1em}}}                    
+\renewcommand{\section}{\@startsection{section}{1}{\z@}
+	{-4ex \@plus -1ex \@minus -.4ex}
+	{1ex \@plus.2ex }
+	{\normalfont\large\sffamily\bfseries\boldmath}}
+\renewcommand{\subsection}{\@startsection {subsection}{2}{\z@}
+	{-3ex \@plus -0.1ex \@minus -.4ex}
+	{0.5ex \@plus.2ex }
+	{\normalfont\sffamily\bfseries\boldmath}}
+\renewcommand{\subsubsection}{\@startsection {subsubsection}{3}{\z@}
+	{-2ex \@plus -0.1ex \@minus -.2ex}
+	{.2ex \@plus.2ex }
+	{\normalfont\small\sffamily\bfseries\boldmath}}                        
+\renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}
+	{-2ex \@plus-.2ex \@minus .2ex}
+	{.1ex}
+	{\normalfont\small\sffamily\bfseries}}
+%%% TABLE OF CONTENTS STUFF, DON'T TOUCH
+\usepackage{titletoc}
+\setcounter{tocdepth}{1}
+\contentsmargin{0cm} % Removes the default margin
+% Part text styling
+\titlecontents{part}[0cm]
+{\addvspace{20pt}\centering\large\bfseries}
+{}
+{}
+{}
+% Chapter text styling
+\titlecontents{chapter}[1.25cm] % Indentation
+{\addvspace{12pt}\large\sffamily\bfseries} % Spacing and font options for chapters
+{\color{theme!60}\contentslabel[\Large\thecontentslabel]{1.25cm}\color{theme}} % Chapter number
+{\color{theme}}  
+{\color{theme!60}\normalsize\;\titlerule*[.5pc]{.}\;\thecontentspage} % Page number
+% Section text styling
+\titlecontents{section}[1.25cm] % Indentation
+{\addvspace{3pt}\sffamily\bfseries} % Spacing and font options for sections
+{\contentslabel[\thecontentslabel]{1.25cm}} % Section number
+{}
+{\hfill\color{black}\thecontentspage} % Page number
+[]
+% Subsection text styling
+\titlecontents{subsection}[1.25cm] % Indentation
+{\addvspace{1pt}\sffamily\small} % Spacing and font options for subsections
+{\contentslabel[\thecontentslabel]{1.25cm}} % Subsection number
+{}
+{\ \titlerule*[.5pc]{.}\;\thecontentspage} % Page number
+[]
+% List of figures
+\titlecontents{figure}[0em]
+{\addvspace{-5pt}\sffamily}
+{\thecontentslabel\hspace*{1em}}
+{}
+{\ \titlerule*[.5pc]{.}\;\thecontentspage}
+[]
+% List of tables
+\titlecontents{table}[0em]
+{\addvspace{-5pt}\sffamily}
+{\thecontentslabel\hspace*{1em}}
+{}
+{\ \titlerule*[.5pc]{.}\;\thecontentspage}
+[]
+
+
+%%% MINI TABLE OF CONTENTS IN PART TITLE PAGE
+% Chapter text styling
+\titlecontents{lchapter}[0em] % Indenting
+{\addvspace{5pt}\normalsize\sffamily\bfseries} % Spacing and font options for chapters
+{\color{theme}\contentslabel[\large\thecontentslabel]{1.25cm}\color{theme}} % Chapter number
+{}  
+{\color{theme}\small\sffamily\bfseries\;\titlerule*[.5pc]{.}\;\thecontentspage} % Page number
+% Section text styling
+\titlecontents{lsection}[0em] % Indenting
+{\sffamily\small} % Spacing and font options for sections
+{\contentslabel[\thecontentslabel]{1.25cm}} % Section number
+{}
+{\color{black}\footnotesize\sffamily\;\titlerule*[.5pc]{.}\;\thecontentspage}
+% Subsection text styling
+\titlecontents{lsubsection}[.5em] % Indentation
+{\normalfont\footnotesize\sffamily} % Font settings
+{}
+{}
+{}
+
+%TODO CHECK WHAT THIS DOES
+% numbered part in the table of contents
+\newcommand{\hsp}{\hspace{20pt}}
+\newcommand{\@mypartnumtocformat}[2]{%
+	\setlength\fboxsep{0pt}%
+	\noindent\colorbox{theme!20}{\strut\parbox[c][.7cm]{\ecart}{\color{theme!70}\Large\sffamily\bfseries\centering#1}}\hskip\esp\colorbox{theme!40}{\strut\parbox[c][.7cm]{\linewidth-\ecart-\esp}{\Large\sffamily\centering#2}}}%
+% unnumbered part in the table of contents
+\newcommand{\@myparttocformat}[1]{%
+	\setlength\fboxsep{0pt}%
+	\noindent\colorbox{theme!40}{\strut\parbox[c][.7cm]{\linewidth}{\Large\sffamily\centering#1}}}%
+\newlength\esp
+\setlength\esp{4pt}
+\newlength\ecart
+\setlength\ecart{1.2cm-\esp}
+\newcommand{\thepartimage}{}%
+\newcommand{\partimage}[1]{\renewcommand{\thepartimage}{#1}}%
+\def\@part[#1]#2{%
+	\ifnum \c@secnumdepth >-2\relax%
+	\refstepcounter{part}%
+	\addcontentsline{toc}{part}{\texorpdfstring{\protect\@mypartnumtocformat{\thepart}{#1}}{\partname~\thepart\ ---\ #1}}
+	\else%
+	\addcontentsline{toc}{part}{\texorpdfstring{\protect\@myparttocformat{#1}}{#1}}%
+	\fi%
+	\startcontents%
+	\markboth{}{}%
+	{\thispagestyle{empty}%
+		\begin{tikzpicture}[remember picture,overlay]%
+		\node at (current page.north west){\begin{tikzpicture}[remember picture,overlay]%	
+			\fill[theme!20](0cm,0cm) rectangle (\paperwidth,-\paperheight);
+			\node[anchor=south east] at (\paperwidth-1cm,-\paperheight+1cm){\parbox[t][][t]{12cm}{
+					\printcontents{l}{0}{\setcounter{tocdepth}{1}}%
+			}};
+			\node[anchor=north east] at (\paperwidth-1.5cm,-3.25cm){\parbox[t][][t]{15cm}{\strut\raggedleft\color{black}\fontsize{20}{20}\sffamily\bfseries#2}};
+			\end{tikzpicture}};
+\end{tikzpicture}}%
+\@endpart}
+\def\@spart#1{%
+\startcontents%
+\phantomsection
+{\thispagestyle{empty}%
+	\begin{tikzpicture}[remember picture,overlay]%
+	\node at (current page.north west){\begin{tikzpicture}[remember picture,overlay]%	
+		\fill[theme!20](0cm,0cm) rectangle (\paperwidth,-\paperheight);
+		\node[anchor=north east] at (\paperwidth-1.5cm,-3.25cm){\parbox[t][][t]{15cm}{\strut\raggedleft\color{black}\fontsize{30}{30}\sffamily\bfseries#1}};
+		\end{tikzpicture}};
+\end{tikzpicture}}
+\addcontentsline{toc}{part}{\texorpdfstring{%
+	\setlength\fboxsep{0pt}%
+	\noindent\protect\colorbox{theme!40}{\strut\protect\parbox[c][.7cm]{\linewidth}{\Large\sffamily\protect\centering #1\quad\mbox{}}}}{#1}}%
+\@endpart}
+\def\@endpart{\vfil\newpage
+\if@twoside
+\if@openright
+\null
+\thispagestyle{empty}%
+\newpage
+\fi
+\fi
+\if@tempswa
+\twocolumn
+\fi}
+
+
+%%% THEOREM STYLES
+\renewcommand{\qedsymbol}{$\square$}% QED square style
+\usepackage[most]{tcolorbox}
+\newcounter{allResults}\numberwithin{allResults}{section}
+% THEOREM-LIKE
+% Theorem; red border all round, grey background
+\newtcbtheorem[number within=section]{tcbtheo}{Theorem}%
+{fonttitle=\sffamily\bfseries\color{resultColor},
+      separator sign dash, description color=black,
+      top=7pt, bottom=7pt,
+      sharp corners, frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      lines before break = 4,
+      enhanced, borderline={\the\tcbBorderWidth}{0pt}{resultColor},
+      parbox=false,
+      colback=resultBackColor,
+      coltext=black,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- ([xshift=-\the\tcbBorderWidth]frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{thm}
+\NewDocumentEnvironment{theorem}{ O{} O{} }
+    {\begin{tcbtheo}{#1}{#2}}{\end{tcbtheo}}
+% Corollary; red border left, no background
+\newtcbtheorem[use counter from=tcbtheo]{tcbcorollary}{Corollary}%
+{fonttitle=\sffamily\bfseries\color{resultColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      lines before break = 3,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{resultColor},
+      parbox=false,
+      colback=black!0,
+      coltext=black,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{cor}
+\NewDocumentEnvironment{corollary}{ O{} O{} }
+    {\begin{tcbcorollary}{#1}{#2}}{\end{tcbcorollary}}
+% Lemma; red border left, grey background
+ \newtcbtheorem[use counter from=tcbtheo]{tcblemma}{Lemma}%
+     {fonttitle=\sffamily\bfseries\color{resultColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{resultColor},
+      parbox=false,
+      colback=resultBackColor,
+      coltext=black,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{lem}
+\NewDocumentEnvironment{lemma}{ O{} O{} }
+    {\begin{tcblemma}{#1}{#2}}{\end{tcblemma}}
+% Proposition; red border left, no background
+\newtcbtheorem[use counter from=tcbtheo]{tcbproposition}{Proposition}%
+     {fonttitle=\sffamily\bfseries\color{resultColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{resultColor},
+      parbox=false,
+      coltext=black,
+      colback=black!0,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{prop}
+\NewDocumentEnvironment{proposition}{ O{} O{} }
+    {\begin{tcbproposition}{#1}{#2}}{\end{tcbproposition}}
+% DEFINITION-LIKE
+% Definition; blue border left, no background
+\newtcbtheorem[use counter from=tcbtheo]{tcbdef}{Definition}%
+     {fonttitle=\sffamily\bfseries\color{definitionColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, unbreakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{definitionColor},
+      parbox=false,
+      colback=black!0,
+      coltext=black,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{def}
+\NewDocumentEnvironment{definition}{ O{} O{} }
+    {\begin{tcbdef}{#1}{#2}}{\end{tcbdef}}
+% Notation; blue border left, no background
+\newtcbtheorem[use counter from=tcbtheo]{tcbnotation}{Notation}%
+     {fonttitle=\sffamily\bfseries\color{definitionColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, unbreakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{definitionColor},
+      parbox=false,
+      colback=black!0,
+      coltext=black,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);},
+      opacityback=0, fontupper=\color{black}}}{not}
+\NewDocumentEnvironment{notation}{ O{} O{} }
+    {\begin{tcbnotation*}{#1}{#2}}{\end{tcbnotation*}}
+% EXAMPLE-LIKE
+% Example; green border left, no background
+\newtcbtheorem[use counter from=tcbtheo]{tcbexample}{Example}%
+     {fonttitle=\sffamily\bfseries\color{exampleColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{exampleColor},
+      parbox=false,
+      colback=exampleBackColor,
+      coltext=black,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{exam}
+\NewDocumentEnvironment{example}{ O{} O{} }
+    {\begin{tcbexample}{#1}{#2}}{\end{tcbexample}}
+% Examples
+\newtcbtheorem[use counter from=tcbtheo]{tcbexamples}{Examples}%
+     {fonttitle=\sffamily\bfseries\color{exampleColor},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{exampleColor},
+      parbox=false,
+      colback=exampleBackColor,
+      coltext=black,
+      parbox=false,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{exam}
+\NewDocumentEnvironment{examples}{ O{} O{} }
+    {\begin{tcbexamples}{#1}{#2}}{\end{tcbexamples}}
+\NewDocumentEnvironment{examtemize}{ O{} O{} }
+    {\begin{tcbexamples}{#1}{#2}\vspace*{-15pt}\begin{itemize}}{\end{itemize}\end{tcbexamples}}
+% PROBLEM
+\newtcbtheorem[use counter from=tcbtheo]{tcbproblem}{Problem}%
+     {fonttitle=\sffamily\bfseries\color{black},
+      separator sign dash, description color=black,
+      top=2pt, bottom=2pt,
+      sharp corners,
+      frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+      enhanced, borderline west={\the\tcbBorderWidth}{0pt}{problemColor},
+      parbox=false,
+      colback=problemBackColor,
+      coltext=black,
+      parbox=false,
+      attach title to upper={\\},
+      subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+      attach title to upper={\\},
+      frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);}, 
+      opacityback=0, fontupper=\color{black}}}{exam}
+\NewDocumentEnvironment{problem}{ O{} O{} }
+    {\begin{tcbproblem}{#1}{#2}}{\end{tcbproblem}}
+% EXERCISE
+\newtcbtheorem[use counter from=tcbtheo]{tcbexercise}{Exercise}%
+    {fonttitle=\sffamily\bfseries\color{black},
+        separator sign dash, description color=black,
+        top=2pt, bottom=2pt,
+        sharp corners,
+        frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+        enhanced, borderline west={\the\tcbBorderWidth}{0pt}{exerciseColor},
+        parbox=false,
+        colback=exerciseBackColor,
+        coltext=black,
+        parbox=false,
+        attach title to upper={\\},
+        subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+        attach title to upper = {},
+        frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);},
+opacityback=0, fontupper=\color{black}}}{exer}
+\NewDocumentEnvironment{exercise}{ O{} O{} }
+    {\begin{tcbexercise}{#1}{#2}}{\end{tcbexercise}}
+
+    \newtcbtheorem[use counter from=tcbtheo]{tcbalgo}{Algorithm}%
+    {fonttitle=\sffamily\bfseries\color{black},
+        separator sign dash, description color=black,
+        top=2pt, bottom=2pt,
+        sharp corners,
+        frame hidden, boxrule=0pt, boxsep=0pt, breakable,
+        enhanced, borderline west={\the\tcbBorderWidth}{0pt}{exerciseColor},
+        parbox=false,
+        colback=exerciseBackColor,
+        coltext=black,
+        parbox=false,
+        attach title to upper={\\},
+        subtitle style = {enhanced jigsaw, boxrule=0pt, bottomrule=0.5pt, bottom=2pt,
+        attach title to upper = {\\},
+        frame code = {\path[black,draw] ([xshift=\the\tcbBorderWidth]frame.south west) -- (frame.south east);},
+opacityback=0, fontupper=\color{black}}}{algo}
+\NewDocumentEnvironment{algorithm}{ O{} O{} }
+{\begin{tcbalgo}{#1}{#2}}{\end{tcbalgo}}
+\NewDocumentEnvironment{algorithm*}{ O{} O{} }
+{\begin{tcbalgo*}{#1}{#2}}{\end{tcbalgo*}}
+
+
+
+
+% HYPERLINKS    
+\usepackage[hidelinks]{hyperref}
+%\hypersetup{hidelinks,backref=true,pagebackref=true,hyperindex=true,colorlinks=false,breaklinks=true,urlcolor= theme,bookmarks=true,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+\usepackage{bookmark}
+\bookmarksetup{open,
+               numbered,
+               addtohook={\ifnum\bookmarkget{level}=0 % chapter
+                          \bookmarksetup{bold}%
+                          \fi
+                          \ifnum\bookmarkget{level}=-1 % part
+                          \bookmarksetup{color=theme,bold}%
+                          \fi
+                         }
+                     }
+
+% ENVIRONMENT TWEAKS                     
+% Fixes proof environment to start on new line
+\makeatletter
+\renewenvironment{proof}[1][\proofname]{\par
+\pushQED{\qed}%
+\normalfont \topsep6\p@\@plus6\p@\relax
+\trivlist
+\item[\hskip\labelsep
+\itshape
+#1\@addpunct{.}]
+\leavevmode}{%
+\popQED\endtrivlist\@endpefalse
+}
+\makeatother
+
+\newcommand{\slide}[1]{\subsubsection{#1}}
+
+
+\lstnewenvironment{python}
+{\vspace{5pt}\begin{center}\rule{0.9\textwidth}{1pt}\end{center}\lstset{language=Python,linewidth=0.9\linewidth,xleftmargin=0.1\linewidth}}
+{\vspace{-10pt}\begin{center}\rule{0.9\textwidth}{1pt}\end{center}}
+\newcommand{\pythoncode}[1]{\lstinline[language=Python]{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
