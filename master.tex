@@ -3,9 +3,677 @@
 \input{notes_template/shorthand.tex}
 \addbibresource{./refs.bib}
 
+\forcecommand{\A}{\mathcal{A}}
+\forcecommand{\D}{\mathcal{D}}
+\forcecommand{\F}{\mathcal{F}}
+\forcecommand{\G}{\mathcal{G}}
+\forcecommand{\I}{\mathcal{I}}
+\forcecommand{\S}{\mathcal{S}}
+\forcecommand{\X}{\mathcal{X}}
+\forcecommand{\Y}{\mathcal{Y}}
+\DeclareMathOperator{\Regret}{Regret}
+\forcecommand{\KL}{D_{\mathrm{KL}}}
+\forcecommand{\dvert}{\,\vert\vert\,}
+\forcecommand{\IDS}{\mathrm{IDS}}
+\forcecommand{\TS}{\mathrm{TS}}
+\DeclareMathOperator{\Ber}{Ber}
+\forcecommand{\dist}{\sim}
+
+
 
 \begin{document}
-\chapter{Foo}
+\chapter*{Learning to Optimize via\\Information-Directed Sampling}
+Russo and Van Roy \cite{InformationDirectedSampling}
+\section{Abstract}
+\begin{itemize}
+    \item Information-directed sampling: minimizes ratio between expected single-period regret and mutual information
+    \item Expected regret bound for general class of models, scales with entropy of optimal action distribution
+    \item SOA performance on Bernoulli/Gaussian/linear bandit problems
+\end{itemize}
+
+\section{Introduction}
+\begin{itemize}
+    \item IDS can dramatically outperform UCB, TS, and knowledge-gradient algorithms
+    \item IDS is more a heuristic than a specific algorithm; needs to be adapted to specific cases
+\end{itemize}
+
+\section{Literature review}
+\begin{itemize}
+    \item Two previous papers have examined using mutual information between optimal action and next observation to guide action selection; \cite{EntropySearchForInformationEfficientGlobalOptimization,AnInformationalApproachToTheGlobalOptimizationOfExpensiveToEvaluateFunctions}. Both seem more focused on optimization of expensive-to-evaluate functions in low-dimensional continuous action spaces with a Gaussian process prior over the objective.
+    \item Knowledge-gradient uses different measure of information; the impact of an observation on the quality of the decision made by a greedy algorithm. Can work well in some settings but no general guarantees and may not converge to optimality even in simple settings.
+    \item Most literature focuses on contexts where goal is to converge to an optimal action in a way that limits exploration costs; not geared towards problems where time preference is important. KG is an exception; can take a discount factor as input for time preference. Some heuristics discussed for discounted problem, and recent work generalises TS to address discounted problems.
+    \item Regret bounds built on information-theoretic analysis of TS, which bound regret of policy in terms of information ratio. Information ratio of IDS is always smaller than of TS so bounds on TS yield regret bounds for IDS.
+\end{itemize}
+
+\section{Problem formulation}
+\begin{itemize}
+    \item Actions $(A_t)_{t\in\N}$ chosen from \emph{finite} action set $\A$, outcomes $(Y_{t,A_t})_{t\in\N}$ observed
+    \item Let $Y_t \equiv (Y_{t,a})_{a\in\A}$ be vector of outcomes at $t\in\N$
+    \item There is some rv $\theta$ such that conditioned on $\theta$, $(Y_t)_{t\in\N}$ is iid
+    \item Agent associates a reward $R(y)$ with each outcome $y\in\Y$ where reward function $R:\Y\to\R$ is fixed and known. Denote by $R_{t,a} = R(Y_{t,a})$ the realized reward of action $a$ at time $t$.
+    \item Uncertainty in $\theta$ induces uncertainty about the true optimal action $A^*\in\argmax_{a\in\A} \E[R_{1,a}\given\theta]$.
+    \item $T$-period regret of actions $A_1,\dots,A_T$ is
+        \[
+            \Regret(T) \defeq \sum_{t=1}^T (R_{t,A^*} - R_{t,A_t});
+        \]
+        here we study expected regret
+        \[
+            \E[\Regret(T)] = \E\left[ \sum_{t=1}^T (R_{t,A^*} - R_{t,A_t}) \right]
+        \]
+        where expectation is taken over randomness in $A_t$, outcomes $Y_t$, and over the prior distribution over $\theta$, i.e. we study the Bayesian regret
+    \item Action $A_t$ is chosen based on history $\F_t = (A_1,Y_{1,A_1},\dots,A_{t-1},Y_{t-1,A_{t-1}})$. With slight abuse of notation write $\pi_t$ for the distribution over actions at time $t$, i.e. $\pi_t(a) = \P(A_t=a\given\F_t)$.
+\end{itemize}
+
+Further notation and information theory:
+\begin{itemize}
+    \item Set $\alpha_t(a) = \P(A^* = a\given \F_t)$ as the posterior distribution of $A^*$.
+    \item For probability measures $P$ and $Q$ on a common measurable space, if $P$ is absolutely continuous wrt $Q$ (i.e. whenever $A$ is $Q$-measurable, $Q(A)=0$ implies $P(A)=0$) the KL divergence between $P$ and $Q$ is
+        \[
+            \KL(P\dvert Q) = \int \log \frac{\diff P}{\diff Q} \diff P
+        \]
+        where $\frac{\diff P}{\diff Q}$ is the Radon-Nikodym derivative of $P$ wrt $Q$.
+    \item For a probability distribution $P$ on a finite set $\X$, the Shannon entropy is
+        \[
+            H(P) \defeq -\sum_{x\in\X} P(x)\log(P(x)).
+        \]
+    \item The mutual information under the posterior distribution between rvs $X_1:\Omega\to\X_1$ and $X_2:\Omega\to\X_2$ is
+        \[
+            I_t(X_1;X_2) \defeq \KL(\P((X_1,X_2)\in\cdot \given \F_t) \dvert \P(X_1\in\cdot \given \F_t) \P(X_2\in\cdot\given \F_t)),
+        \]
+        the KL divergence between the joint posterior of $X_1$ and $X_2$ and the product of the marginals. Note $I_t(X_1;X_2)$ is an rv because it depends on the conditional probability measure $\P(\cdot\given\F_t)$.
+    \item Define the information gain from action $a$ as
+        \[
+            g_t(a) = I_t(A^*;Y_{t,a}).
+        \]
+        Can be shown this is equal to expected reduction in entropy of the posterior distribution of $A^*$ due to observing $Y_t(a)$, i.e.
+        \[
+            g_t(a) = \E[H(\alpha_t) - H(\alpha_{t+1}) \given \F_t, A_t=a]
+        \]
+        which is used a lot in this paper.
+    \item Let $\Delta_t(a) \defeq \E[R_{t,A^*} - R_{t,a} \given \F_t]$ denote the expected instantaneous regret of action $a$ at time $t$.
+    \item Overload $g_t$ and $\Delta_t$: for an action-sampling distribution $\pi$,
+        \[
+            g_t(\pi) \defeq \sum_{a\in\A} \pi(a)g_t(a)
+        \]
+        denotes expected information gain when actions are selected according to $\pi$. 
+        \[
+            \Delta_t(\pi) = \sum_{a\in\A} \pi(a)\Delta_t(a)
+        \]
+        is defined analogously.
+    \item Occasionally write $\E_t[\cdot] = \E_t[\cdot\given\F_t]$ for conditional expectations under the posterior, and similarly write $\P_t(\cdot) = \P(\cdot\given\F_t)$.
+\end{itemize}
+
+\section{Algorithm design principles}
+\subsection{Motivation}
+\begin{itemize}
+    \item Goal: minimize expected regret \emph{over a time horizon $T$}, which will be large. For large $T$ and moderate times $t\ll T$, mapping from belief state to action prescribed by a Bayes-optimal policy does not vary significantly between time steps, so can restrict attention to stationary heuristic policies.
+    \item IDS designed to account for kinds of information including:
+        \begin{itemize}
+            \item Indirect information (feedback about other actions even if there is no useful feedback about the selected action)
+            \item Cumulating information (can select an action to obtain feedback that does not immediately enable higher expected reward but can do when combined with feedback from subsequent actions)
+            \item Avoids irrelevant information
+        \end{itemize}
+\end{itemize}
+
+\subsection{Information-directed sampling}
+\begin{itemize}
+    \item Balances obtaining low expected regret in current period and acquiring information. In particular
+        \[
+            \pi_t^{\IDS} \in \argmin_{\pi\in\D(\A)} \set{ \Psi_t(\pi) \defeq \frac{\Delta_t(\pi)^2}{g_t(\pi)} }
+        \]
+        where we call $\Psi_t(\pi)$ the \definedword{information ratio} of an action-sampling distribution $\pi$.
+    \item Stationary randomized policy: randomized in that each action is randomly sampled from a distribution, and stationary in that this action distribution is determined by the posterior distribution of $\theta$ and is otherwise independent of the time period.
+\end{itemize}
+
+Randomization plays a fundamental role:
+
+\begin{example}[A known standard]
+    \begin{itemize}
+        \item Two actions $\A=\set{a_1,a_2}$. Rewards from $a_1$ are $\Ber(1/2)$, rewards from $a_2$ are either $\Ber(3/4)$ with prior probability $p_0$ and $\Ber(1/4)$ with prior probability $1-p_0$.
+        \item Consider stationary deterministic policies. Then each action $A_t$ is a deterministic function of $p_{t-1}$, the posterior probability conditioned on observations made through period $t-1$. Suppose for some $p_0>0$, the policy selects $A_1=a_1$. This is an uninformative action, so $p_t=p_0$ and $A_t=a_1$ for all $t$, so expected regret is linear in time. So for any deterministic stationary policy, there is some prior probability $p_0$ such that expected regret grows linearly with time.
+    \end{itemize}
+\end{example}
+
+Later establish a sublinear bound on expected regret of IDS, so randomization plays a fundamental role.
+
+\subsection{Alternative design principles}
+\subsubsection{UCB and TS}
+Can perform well in many problems and provide strong theoretical guarantees. However, in some cases can perform very poorly relative to IDS. In both cases, UCB and TS restrict attention to sampling actions that have some chance of being optimal.
+
+\begin{example}[A revealing action]
+    \vspace*{-20pt}
+    \begin{itemize}
+        \item Let $\A=\set{0,\dots,K}$ be $K+1$ actions and let $\theta$ be uniform from a finite set $\Theta=\set{1,\dots,K}$ of $K$ possible values. Consider bandit feedback $Y_{t,a}=R_{t,a}$. Under $\theta$, the reward of action $a$ is
+            \[
+                R_{t,a} = \begin{cases}
+                    1 & \theta = a \\
+                    0 & \theta\neq a, \, a\neq 0 \\
+                    \frac{1}{2\theta} & a = 0.
+                \end{cases}
+            \]
+        \item Action $0$ is known to never yields the maximal reward, so is never selected by TS or UCB. Instead, these algorithms select among actions $\set{1,\dots,K}$ ruling out only a single action at a time until a reward 1 is earned and the optimal action is found, so expected regret is linear in $K$.
+        \item IDS recognizes that much more is learned by drawing action $0$ than by selecting another action; selecting action $0$ immediately identifies the optimal action.
+    \end{itemize}
+\end{example}
+
+\begin{example}[Sparse linear model]
+    \vspace*{-20pt}
+    \begin{itemize}
+        \item Linear bandit problem, $\A\subseteq\R^d$, reward from $a\in\A$ is $a^\trans\theta^*$. True parameter $\theta$ drawn uniformly at random from set of $1$-sparse vectors
+            \[
+                \Theta = \set{\theta'\in\set{0,1}^d : \norm{\theta'}_0=1}.
+            \]
+            Assume $d=2^m$ for some $m\in\N$. Action set is taken to be the set of vectors in $\set{0,1}^d$ normalized to be a unit vector in the $L^1$ norm, i.e.
+            \[
+                \A = \set{ \frac{x}{\norm{x}_1} : x\in\set{0,1}^d, \, x\neq 0}. 
+            \]
+        \item When an action $a$ is selected and $y=a^\trans\theta\in\set{0,1/\norm{a}_0}$ is observed, each $\theta'\in\Theta$ with $a^\trans\theta'\neq y$ is ruled out. Let $\Theta_t$ be the set of parameters in $\Theta$ consistent with rewards observed up to time $t$, and let $\I_t = \set{i\in\set{1,\dots,d} : \theta_i'=1,\theta'\in\Theta_t}$ denote the corresponding set of possible positive components.
+        \item Note $A^* = \theta$, i.e. if $\theta$ were known we should choose it all the time. TS and UCB only choose actions from the support of $A^*$ and therefore will only sample actions $a\in\A$ which, like $A^*$, have a single positive component. Unless that is also the positive component in $\theta$, the algorithm gets a reward of $0$ and rules out only one element of $\I_t$, so in the worst case we need $d$ samples to identify the optimal action.
+        \item IDS effectively performs binary search: it selects $a\in\A$ with $a_i>0$ for half the components $i\in \I_t$ and $a_i=0$ for the other half as well as any $i\notin \I_t$. After $\log_2(d)$ time steps the true value of $\theta$ is identified.
+        \item Why? All params in $\Theta_t$ are equally likely, hence the expected reward of an action $a$ is $\frac{1}{\abs{\I_t}} \sum_{i\in I_t} a_i$. Since $a_i\geq 0$ and $\sum_i a_i = 1$ for each $a\in\A$, every action whose positive components are in $\I_t$ yields the highest possible expected reward of $1/\abs{\I_t}$. Therefore binary search minimizes expected regret in period $t$ for this problem. At the same time, binary search is assured to rule out half the parameter vectors in $\Theta_t$ at each time $t$. This is the largest possible expected reduction, and also leads to the largest possible information gain about $A^*$. Since binary search both minimizes expected regret in period $t$ and uniquely maximizes expected information gain in period $t$, it is the sampling strategy followed by IDS.
+        \item Here we can explicitly calculate the information ratio of each policy.
+
+            \begin{itemize}
+                \item First consider Thompson sampling. The numerator in $\Psi_1(\pi)$ is $\Delta_1(\pi)^2$, and 
+                    \[
+                        \Delta_1(\pi)=\sum_{a\in\A} \pi(a)\E[R_{1,A^*} - R_{1,a}\given\F_1].
+                    \]
+                    Note that since $\F_t = (A_1,Y_{1,A_1},\dots,A_{t-1},Y_{t-1,A_{t-1}})$, $\F_1=\emptyset$ is empty and conditioning on it has no effect.
+
+                    Since TS only chooses actions from the support of $A^*$, and there are $d$ $1$-sparse vectors, we have
+                    \[
+                        \pi_1^{\TS}(a) = \begin{cases}
+                            0 & \text{$a$ is not $1$-sparse} \\
+                            1/d & \text{$a$ is $1$-sparse}.
+                        \end{cases}
+                    \]
+                    Rewards are deterministic, and we have $R_{1,A^*} = 1$, $R_{1,a} = \ind_{a=A^*}$. Therefore
+                    \begin{align*}
+                        \E[R_{1,A^*} - R_{1,a}\given\F_1] & = 1 - \ind_{a=A^*} = \ind_{a\neq A^*}.
+                    \end{align*}
+                    So we have
+                    \[
+                        \Delta_1(\pi_1^{TS}) = \sum_{\substack{\text{$a$ $1$-sparse}\\a\neq A^*}} \pi_1^{TS}(a) = (d-1)\cdot \frac{1}{d},
+                    \]
+                    so it follows that the numerator of $\Psi_1(\pi_1^{\TS}) = (d-1)^2/d^2$.
+
+                    The denominator in $\Psi_1(\pi_1^{\TS})$ is $g_1(\pi_1^{\TS}) = \sum_{a\in\A} \pi_1^{\TS}(a)g_1(a)$, where
+            \begin{align*}
+                g_t(a) & = \E[H(\alpha_t) - H(\alpha_{t+1}) \given\F_t, A_t=a] \\
+                \alpha_t(a) & = \P(A^* = a \given \F_t).
+            \end{align*}
+            Now $\pi_1^{\TS}(a)$ is as before. We have
+            \[
+                g_1(\pi_1^{\TS}) = \sum_{a\in\A} \pi_1^{\TS}(a)g_1(a) = \pi_1^{\TS}(A^*)g_1(A^*) + \sum_{a\neq A^*} \pi_1^{\TS}(a)g_1(a),
+            \]
+            and
+            \begin{align*}
+                \pi_1^{\TS}(A^*)g_1(A^*) & = \frac{1}{d}g_1(A^*) \\
+                \sum_{a\neq A^*} \pi_1^{\TS}(a)g_1(a) & = \frac{d-1}{d} g_1(a), \quad a\neq A^*,
+            \end{align*}
+            since $\pi_1^{\TS}$ only assigns mass to those actions $a$ which are $1$-sparse.
+
+            By definition, $g_1(a) = \E[H(\alpha_1) - H(\alpha_2) \given \F_1,\,A_1=a]$. We start by finding $g_1(a)$ for $a\neq A^*$. Recall that $\F_1=\emptyset$ so conditioning on it has no effect.
+            \begin{align*}
+                \alpha_1(a') & = \P(A^* = a' \given \F_1) = \begin{cases}
+                                 \frac{1}{d} & \text{$a'$ is $1$-sparse} \\
+                                 0 & \text{otherwise},
+                             \end{cases}
+            \end{align*}
+            so $H(\alpha_1) = \log(d)$.
+
+            For $\alpha_2$, note that $\F_2 = (A_1,Y_{1,A_1}) = (A_1,0)$, since we are conditioning on $A_1=a\neq A^*$. Consequently
+            \begin{align*}
+                \alpha_2(a') & = \P(A^* = a' \given \F_2) = \begin{cases}
+                                  0 & a' = A_1 \\
+                                  \frac{1}{d-1} & a' \neq A_1, \,\text{$a'$ is $1$-sparse} \\
+                                  0 & \text{otherwise}
+                              \end{cases}
+            \end{align*}
+            so $H(\alpha_2) = \log(d-1)$.
+
+            Hence $H(\alpha_1)-H(\alpha_2) = \log\left(\frac{d}{d-1}\right)$, and we have $g_1(a') = \log\left(\frac{d}{d-1}\right)$ for $a'\neq A^*$.
+
+            For $a'=A^*$, note again that $\F_1=\emptyset$ and therefore $H(\alpha_1)=\log d$ by the same reasoning as before. This time however $\F_2=(A_1,Y_{1,A_1}) = (A^*,1)$, since we condition on $A_1=A^*$. Therefore
+            \begin{align*}
+                \alpha_2(a') & = \P(A^*=a'\given\F_2) = \begin{cases}
+                                  0 & a'\neq A_1 \\
+                                  1 & a'=A_1
+                              \end{cases}
+            \end{align*}
+            so $H(\alpha_2)=0$.
+
+            Finally we obtain 
+            \[
+                g_1(\pi_1^{\TS}) = \frac{\log d}{d} + \frac{d-1}{d}\log\left(\frac{d}{d-1}\right)
+            \]
+            so that
+            \[
+                \Psi_1(\pi_1^{\TS}) = \frac{(d-1)^2/d^2}{\frac{\log(d)}{d} + \frac{d-1}{d}\log\left(\frac{d}{d-1}\right)} \sim \frac{d}{\log(d)}.
+            \]
+
+        \item For IDS, first consider $\Delta_1(a) = \E[R_{1,A^*} - R_{1,a}\given\F_1]$. Say a $1$-sparse vector ``aligns'' with action $a$ with non-negative entries if the $1$ in the $1$-sparse vector is in the same index as a positive entry in $a$.
+
+            Any action we choose at time step $1$ has $d/2$ positions positive, so to be a unit vector in $L^1$-norm all positions which are positive must have value $2/d$. The reward $R_{1,a}$ is therefore $2/d$ if $A^*$ aligns with $a$ and is $0$ if $A^*$ does not align with $a$. These events happen for half of the values of $a$ which can be chosen by IDS, and each value of $a$ is chosen by IDS with equal probability. Therefore
+
+            \begin{align*}
+                \Delta_1(\pi_1^{IDS}) & = \sum_{a:\text{ $A^*$ aligns with $a$}} \pi_1^{\IDS}(a) \left(1-\frac{2}{d}\right) + \sum_{a:\text{ $A^*$ does not align with $a$}} \pi_1^{\IDS}(a) \cdot 1 \\
+                                      & = \frac{1}{2} \left(1-\frac{2}{d}\right) + \frac{1}{2} \cdot 1  = \left(1 - \frac{1}{d}\right),
+            \end{align*}
+            so that the numerator of $\Psi_1(\pi_1^{\IDS})$ is $(1-1/d)^2$.
+
+            Now consider
+            \[
+                g_t(\pi) = \sum_a \pi_1(a) g_1(a) = \sum_{a\neq A^*} \pi_1(a) g_1(a),
+            \]
+            where the last term follows because $\pi_1^{\IDS}$ picks actions $a$ with half the components positive (which can never include the optimal action $A^*$). We have
+            \[
+                \alpha_1(a') = \P(A^* = a' \given \F_1) = \begin{cases}
+                    1/d & \text{$a'$ is $1$-sparse} \\
+                    0 & \text{otherwise},
+                \end{cases}
+            \]
+            and $H(\alpha_1) = \log d$ as before. Now the first action we pick either aligns with $A*$ and gets reward $2/d$, with probability $1/2$, or gets a reward of $0$ with probability $1/2$. So
+            \[
+                \F_2 = (a,Y_{1,a}) = \begin{cases}
+                    (a,0) & \text{w.p. $1/2$} \\
+                    (a,2/d) & \text{w.p. $1/2$}.
+                \end{cases}
+            \]
+            Suppose $\F_2 = (a,2/d)$. Then $A^*$ must align with $a$. There are $d/2$ choices of $1$-sparse vectors which align with $a$, and therefore
+            \begin{align*}
+                \alpha_2(a') & = \P(A^*=a'\given \F_2) = \begin{cases}
+                    0 & \text{$a'$ is not $1$-sparse} \\
+                    2/d & \text{$a'$ is $1$-sparse and aligns with $a$} \\
+                    0 & \text{$a'$ is $1$-sparse and does not align with $a$}
+                \end{cases}
+            \end{align*}
+
+            The case when $\F_2 = (a,0)$ is similar but with ``aligns'' and ``does not align'' interchanged. In either case we have
+            \[
+                H(\alpha_2) = -\frac{d}{2}\cdot \frac{2}{d} \log\left(\frac{2}{d}\right) = \log d - \log 2.
+            \]
+            Therefore
+            \[
+                g_1(a) = \log d - (\log d - \log 2) = \log 2,
+            \]
+            for $a\neq A^*$. Since $\pi_1^{\IDS}(A^*)=0$, we need not calculate $g_1(A^*)$.
+
+            Putting this together, for IDS we get
+            \[
+                \Psi_1(\pi_1^{\IDS}) = \frac{\Delta_1(\pi_1^{\IDS})^2}{g_1(\pi_1^{\IDS})} = \frac{(1-1/d)^2}{\log 2} \sim \frac{1}{\log 2}.
+            \]
+
+
+
+    \end{itemize}
+    \end{itemize}
+\end{example}
+
+\begin{example}[Assortment optimization]
+    \vspace*{-20pt}
+    \begin{itemize}
+        \item Consider customers of unknown type $\theta\in\Theta$ with $\abs{\Theta}=n$. Each product is aimed at customers of a given type, and the assortment $a\in\A=\Theta^m$ of $m$ products offered is characterized by the vector $a=(a_1,\dots,a_m)$. Customers are more likely to derive high value from a product geared towards their type. When offered an assortment $a$, the customer associates with the $i$th product utility
+            \[
+                U_{\theta,i}(a)^{(t)} = \beta\ind_{a_i=\theta} + W_i^{(t)}, 
+            \]
+            where $W_i^{(t)}$ follows an extreme-value distribution and $\beta\in\R$ is a known constant. The probability a customer of type $\theta$ chooses product $i$ is
+            \[
+                \frac{\exp(\beta\ind_{a_i=\theta}}{\sum_{j=1}^m \exp(\beta\ind_{a_j=\theta}}.
+            \]
+            When an assortment $a$ is offered at time $t$, the customer makes a choice $I_t = \argmax_i U_{\theta,i}^{(t)} (a)$ and leaves review $U_{\theta,I_t}^{(t)}(a)$ indicating the utility they derive, both of which are observed by the recommendation system. The reward is the normalized utility, $U_{\theta,I_t}^{(t)} (a)/\beta$.
+        \item If the type of customer $\theta$ were known, the optimal recommendation would be $A^* = (\theta,\theta,\dots,\theta)$, only products targeted at the customer's type. So both TS and UCB would only offer assortments consisting of a single type of product, and hence each require on the order of $n$ samples to learn the customer's true type. IDS goes for a diverse assortment to learn more quickly.
+        \item Suppose $\theta$ is drawn uniformly from $\Theta$ and consider $\beta\to \infty$. Then the probability a customer chooses a product of type $\theta$ (if it is available) tends to $1$, and the normalised review $\beta^{-1}U_{\theta,I_t}^{(t)} (a)$ tends to $\ind_{a_{I_t}=\theta}$, an indicator of whether the chosen product is of type $\theta$. The initial assortment offered by IDS will be $m$ different and previously untested product types, since this maximizes the algorithm's expected gain in the next period and the information gain. The algorithm continues offering assortments containing $m$ unique, untested types until a review near $U_{\theta,I_t}^{(t)} (a)\approx 1$ is received. With high probability this takes at most $\ceil{n/m}$ time periods --- an factor of $m$ faster than UCB or TS.
+        \item Again we explicitly calculate the information ratio of each policy.
+            \begin{itemize}
+                \item For Thompson sampling: we first find $\Delta_1(\pi_1^{\TS})^2$. We know
+                    \begin{align*}
+                        R_{1,A^*} & = 1, \quad R_{1,a} = \begin{cases}
+                            0 & a\neq A^* \\
+                        1 & a = A^*
+                        \end{cases}
+                            \implies \Delta_1(a) = \ind_{a\neq A^*},
+                        \end{align*}
+                        and
+                        \[
+                            \pi_1^{\TS}(a) = \begin{cases}
+                                1/n & a = (\theta,\theta,\dots,\theta)\text{ for some }\theta\in\Theta \\
+                                0 & \text{otherwise},
+                            \end{cases}
+                        \]
+                        where we recall $\abs{\Theta}=n$. Therefore
+                        \[
+                            \Delta_1(\pi_1^{\TS}) = \sum_{\theta\in\Theta} \pi_1^{\TS}((\theta,\dots,\theta)) \ind_{a\neq A^*} = (n-1)\cdot \frac{1}{n} = 1-\frac{1}{n}.
+                        \]
+                        So $\Delta_1(\pi_1^{\TS})^2 = (1-1/n)^2$.
+
+                        For $g_1(\pi_1^{\TS})$, first consider $g_1(a)$, $a\neq A^*$. We have
+                        \begin{align*}
+                            g_1(a) & = \E[H(\alpha_1) - H(\alpha_2) \given \F_1,\, A_1=a\neq A^*] \\
+                            \alpha_1(a') & =  \P(A^*=a') = \begin{cases}
+                                1/n & \exists \theta\in\Theta : a' = (\theta,\dots,\theta) \\
+                                0 & \text{otherwise}
+                            \end{cases} \\
+                                \implies H(\alpha_1) & = \log n \\
+                                \alpha_2(a') & = \P(A^* =a' \given \F_2=(a,0)) = \begin{cases}
+                                    0 & a' = a \\
+                                    \frac{1}{n-1} & \exists\theta\in\Theta : a' = (\theta,\dots,\theta), \, a'\neq a \\
+                                    0 & \text{otherwise}
+                                \end{cases} \\
+                                    \implies H(\alpha_2) & = \log(n-1) \\
+                                    \implies g_1(a) & = \log\left(\frac{n}{n-1}\right), \, a\neq A^*.
+                        \end{align*}
+                        For $a=A^*$, we have
+                        \begin{align*}
+                            g_1(A^*) & = \E[H(\alpha_1) - H(\alpha_2) \given \F_1,\,A_1=A^*] \\
+                            H(\alpha_1) & = \log n \\
+                            \alpha_2(a') & = \P(A^* = a' \given \F_2=(a,1)) = \begin{cases}
+                                1 & a'=a \\
+                                0 & \text{otherwise}
+                            \end{cases} \\
+                                \implies H(\alpha_2) & = 0 \\
+                                \implies g_1(A^*) & = \log n.
+                        \end{align*}
+                        Putting this together we have
+                        \[
+                            g_1(\pi_1^{\TS}) = \frac{1}{n}\log(n) + \frac{n-1}{n} \log\left(\frac{n}{n-1}\right),
+                        \]
+                        so that
+                        \[
+                            \Psi_1(\pi_1^{\TS}) = \frac{ \left(1-\frac{1}{n}\right)^2 }{\frac{1}{n}\log(n) + \frac{n-1}{n}\log\left(\frac{n}{n-1}\right) } \sim \frac{n}{\log(n)}.
+                        \]
+
+                    \item For IDS: we abuse notation slightly and write $\theta\in a$ to mean that one of the entries of $a\in\A = \Theta^m$ is the element $\theta\in\Theta$. To calculate $\Delta_1(\pi_1^{\IDS})$, note we have
+                        \[
+                            R_{1,A^*} = 1, \quad R_{1,a} = \ind_{\theta\in a}, \quad R_{1,A^*} - R_{1,a} = \ind_{\theta\notin a}.
+                        \]
+                        Moreover, there are $m! \cdot \binom{n}{m} = \frac{n!}{(n-m)!}$ different $m$-tuples from $n$ symbols, so
+                        \[
+                            \pi_1^{\IDS}(a) = \begin{cases}
+                                \frac{(n-m)!}{n!} & \text{all elements of $a$ are different} \\
+                                0 & \text{otherwise},
+                            \end{cases}
+                        \]
+                        so
+                        \begin{align*}
+                            \Delta_1(\pi_1^{\IDS}) & = \sum_a \pi_1^{\IDS}(a) \ind_{\theta\notin a} = \sum_{\text{$a$: all elements of $a$ differ}} \frac{(n-m)!}{n!} \ind_{\theta\notin a} \\
+                                                   & = \frac{(n-1)!}{(n-m-1!)}\cdot\frac{(n-m)!}{n!} = \frac{n-m}{n} = \left(1-\frac{m}{n}\right),
+                        \end{align*}
+                        where to get to the second line we use the fact there are $m!\cdot\binom{n-1}{m} = \frac{(n-1)!}{(n-m-1)!}$ choices of $m$-tuples with different symbols which do not contain $\theta$.
+
+                        Now we compute $g_1(\pi_1^{\IDS}) = \E[H(\alpha_1)-H(\alpha_2)\given \F_1,A_1=a]$. Again we note that $\F_1=\emptyset$ so conditioning on it has no effect.
+                        \[
+                            \alpha_1(a') = \P(A^*=a'\given\F_1) = \begin{cases}
+                                1/n & \exists\theta\in\Theta, \, a' = (\theta,\dots,\theta) \\
+                                0 & \text{otherwise},
+                            \end{cases}
+                        \]
+                        so $H(\alpha_1)=\log n$. For $\alpha_2$, there are two cases depending on $a$. If $\theta\in a$, then $\F_2=(A_1,1)$ and we have
+                        \[
+                            \alpha_2(a') = \P(A^* = a'\given\F_2) = \begin{cases}
+                                1/m & \exists\theta\in A_1, \, a'=(\theta,\dots,\theta) \\
+                                0 & \text{otherwise},
+                            \end{cases}
+                        \]
+                        so $H(\alpha_2)=\log m$. If instead $\theta\notin a$, then $\F_2=(A_1,0)$ and we have
+                        \[
+                            \alpha_2(a') = \P(A^* = a'\given\F_2) = \begin{cases}
+                                1/(n-m) & \exists\theta\notin A_1, \, a'=(\theta,\dots,\theta) \\
+                                0 & \text{otherwise},
+                            \end{cases}
+                        \]
+                        so $H(\alpha_2) = \log(n-m)$. Taken together, we get
+                        \[
+                            g_1(a) = \begin{cases}
+                                \log(n/m) & \theta\in a \\
+                                \log(n/(n-m)) & \theta\notin a.
+                            \end{cases}
+                        \]
+
+                        Finally we compute
+                        \[
+                            g_1(\pi_1^{\IDS}) = \sum_a \pi_1^{\IDS}(a) g_1(a).
+                        \]
+                        To do so we recall that
+                        \[
+                            \pi_1^{\IDS}(a) = \begin{cases}
+                                \frac{(n-m)!}{n!} & \text{all elements of $a$ are different} \\
+                                0 & \text{otherwise},
+                            \end{cases}
+                        \]
+                        and so we must count the number of tuples in $\A=\Theta^m$ which have all different elements and which either contain $\theta$ or do not contain $\theta$. For the number of tuples containing $\theta$, there are $\binom{n-1}{m-1}$ choices for the other symbols and $m!$ ways to arrange them (noting they are all different), so there are $m!\binom{n-1}{m-1}$ such sequences. For the number of tuples not containing $\theta$, there are $\binom{n-1}{m}$ choices for the symbols and $m!$ ways to arrange them, so there are $m!\binom{n-1}{m}$ such sequences. Consequently
+                        \begin{align*}
+                            g_1(\pi_1^{\IDS}) & = m!\binom{n-1}{m-1} \frac{(n-m)!}{n!}\log\left(\frac{n}{m}\right) + m!\binom{n-1}{m} \frac{(n-m)!}{n!} \log\left(\frac{n}{n-m}\right) \\
+                            & = \frac{m!(n-1)!}{(m-1)!(n-m)!}\cdot\frac{(n-m)!}{n!}\log\left(\frac{n}{m}\right) + \frac{m!(n-1)!}{m!(n-m-1)!} \cdot\frac{(n-m)!}{n!} \log\left(\frac{n}{n-m}\right) \\
+                            & = \frac{m}{n}\log\left(\frac{n}{m}\right) + \frac{n-m}{n}\log\left(\frac{n}{n-m}\right),
+                        \end{align*}
+                        so that finally we have
+                        \[
+                            \Psi_1(\pi_1^{\IDS}) = \frac{\Delta_1(\pi_1^{\IDS})^2}{g_1(\pi_1^{\IDS})} = \frac{\left(1-\frac{m}{n}\right)^2}{\frac{m}{n}\log\left(\frac{n}{m}\right) + \frac{n-m}{n}\log\left(\frac{n}{n-m}\right)} \leq \frac{n}{m\log\left(\frac{n}{m}\right)}.
+                        \]
+            \end{itemize}
+    \end{itemize}
+\end{example}
+
+Could also try to maximize information about model parameter $\theta$, e.g. suppose we try to maximize
+\[
+    \E_t[R_{t,a}] + \lambda I_t(Y_{t,a};\theta);
+\]
+call this $\theta$-IDS. Next example shows it isn't good:
+
+\begin{example}[Unconstrained assortment optimization]
+    \vspace*{-20pt}
+    \begin{itemize}
+        \item Again consider recommending assortments of products to a customer with unknown preferences. Can choose any subset $a\subset\set{1,\dots,n}$ to display. If offered assortment $a$ at time $t$, customer chooses $J_t=\argmax_{i\in a} \theta_i$ and leaves review $R_{t,a}=\theta_{J_t}$ where $\theta_i$ is utility for product $i$. Recommendation system gets both $J_t$ and review $R_{t,a}$, and wants to learn the assortment maximising the review $R_{t,a}$. Suppose $\theta$ is a random permutation of $(1,1/2,1/3,\dots,1/n)$. Customer is known to assign utility 1 to best item, $1/2$ to the next best, and so on, but the rank ordering is unknown.
+        \item No learning needed to offer optimal assignment: just offer full collection $a=\set{1,\dots,n}$, customer picks most preferred. This assortment reveals the item most preferred to the customer but does not yield information about other items. 
+        \item $\theta$-IDS starts by offering full assortment $A_1=\set{1,\dots,n}$ yielding a reward of 1, and by revealing top item, yields information $I_1(Y_{1,A_1};\theta)=\log n$. If $1/2<\lambda\log(n-1)$, which is guaranteed for large enough $n$, it will continue to experiment with suboptimal assortments; in the second time step, it offers $A_2$, consisting of all products except $\argmax_i\theta_i$. This reveals the second most preferred item, yielding information $I_2(Y_{2,A_2};\theta)=\log(n-1)$. This process repeats until the first $k$ such that $\lambda\log(n+1-k) < 1-1/k$.
+        \item IDS recognises that the optimal assortment $A^*=\set{1,\dots,n}$ does not depend on full knowledge of $\theta$, so does not invest in identifying $\theta$.
+    \end{itemize}
+\end{example}
+
+\subsubsection{Expected improvement and knowledge gradient}
+\begin{itemize}
+    \item Expected improvement: one of the most used techniques in Bayesian optimisation
+    \item 
+\end{itemize}
+
+\section{Extensions}
+\begin{itemize}
+    \item IDS for discounted problems
+\end{itemize}
+
+\chapter*{Provably efficient RL with Rich Observations via Latent State Decoding}
+Du, Krishnamurthy, Jiang, Agarwal, Dudik, Langford \cite{ProvablyEfficientRLWithRichObservations}
+
+\section{Abstract}
+\begin{itemize}
+    \item Exploration problem in episodic MDPs, rich observations from a small number of latent states
+    \item Estimate mapping from observations to latent states inductively via regression and clustering and use this for good exploration policies
+    \item Finite-sample guarantees on quality of learned state decoding function and exploration policies
+    \item Improves over $Q$-learning with na\"{i}ve exploration
+\end{itemize}
+
+\section{Introduction}
+\begin{itemize}
+    \item Study RL in episodic environments with rich observations (e.g. images, text); not many methods to explore well in these environments
+    \item Previous approaches hard to adapt to rich observation spaces since number of interactions is polynomial in number of observed states
+    \item Recent work on contextual decision processes identified low-rank structures enabling exploration algorithms with sample complexity polynomial in rank parameter; however provably computationally intractable or practically cumbersome
+    \item Here: learn a decoding function mapping a rich observation to corresponding latent state. If such a function learned perfectly, reduce problem to a tabular problem where exploration is tractable. Show such an approach is
+        \begin{itemize}
+            \item Provably sample-efficient: use number of samples polynomial in number of latent states, horizon, and complexity of decoding function class
+            \item Computationally practical: easy to implement
+        \end{itemize}
+    \item Introduce block MDPs and $\eps$-policy covers
+\end{itemize}
+
+\section{Setting and task definition}
+\begin{itemize}
+    \item Write $[h]=\set{1,\dots,h}$
+    \item For finite $S$ write $U(S)$ for the uniform distribution over $S$
+    \item Write $\Delta_d$ for simplex in $\R^d$
+    \item Write $\norm{\cdot}$ and $\norm{\cdot}_1$ for Euclidean and $\ell_1$ norms
+\end{itemize}
+
+\subsection{Block MDPs}
+\begin{definition}[Block MDP]
+    A \definedword{block MDP} is a finite (but unobservable) latent space $\S$, a finite action space $\A$ with $\abs{A}=K$, and a possibly infinite observable context space $\X$. The dynamics of a BMDP are described by the initial state $s_1\in\S$ and two conditional probability functions: the state-transition function $p(s'\given s,a)$ and the context-emission function $q(x\given s)$ for all $s,s'\in\S$, $a\in\A$, $x\in\X$. For continuous context spaces, $q(\cdot\given s)$ is a density relative to some suitable measure.
+
+    We assume that each context $x$ uniquely determines its generating state $s$, i.e. the context space $\X$ can be partitioned into disjoint blocks $\X_s$ each containing the support of the conditional distribution $q(\cdot\given s)$.
+\end{definition}
+
+\begin{itemize}
+    \item May also consider distributions of rewards conditioned on context and action, but this paper focuses on pure exploration.
+    \item Consider episodic learning tasks, finite horizon $H$.
+    \item Each step the environment generates a context $x_h\dist q(\cdot\given s_h)$, agent observes context $x_h$ (not $s_h)$, takes action $a_h$, and environment transitions to a new state $s_{h+1}\dist p(\cdot\given s_h,a_h)$. Call the sequence $(s_1,x_1,a_1,\dots,s_H,x_H,a_H,s_{H+1},x_{H+1})$ a trajectory.
+    \item The sets $\X_s$ are unique up to sets of measure zero under $q(\cdot\given s)$.
+    \item Block structure implies there is a perfect decoding function $f^*:\X\to\S$ mapping contexts to generating states.
+    \item BMDP model has been assumed in prior works but not under the same name.
+    \item Assume that $\S$ can be partitioned into disjoint sets $\S_h$, $h\in[H+1]$, so that $p(\cdot\given s,a)$ is supported on $\S_{h+1}$ whenever $s\in\S_h$. Refer to $h$ as the level and assume it is observable as part of context, so context space is also partitioned into sets $\X_h$. Write $S_{[h]} = \cup_{l\in[h]}\S_l$ for set of states up to level $h$, similarly for $X_{[h]}$.
+    \item Assume $\abs{\S_h}\leq M$. Seek learning algorithms scaling polynomially in $M$, $K$ and $H$, but not depending on $\abs{\X}$ explicitly.
+\end{itemize}
+
+\subsection{Solution concept: cover of exploratory policies}
+\begin{itemize}
+    \item For each state $s\in\S$, seek an agent strategy for reaching that state $s$. Here an agent strategy is an $h$-step policy, i.e. a map $\pi:\X_{[h]}\to\A$ specifying what action to take in each context up to step $h$. If $h<H$, the agent can act arbitrarily until the end of the episode.
+    \item For $h$-step policy $\pi$, write $\P^\pi$ to denote distribution over $h$-step trajectories induced by $\pi$, e.g. $\P^\pi(s)$ is probability of reaching state $s$ while executing $\pi$.
+    \item Consider randomized strategies; an $h$-step policy mixture $\eta$ is a distribution over $h$-step policies. To execute $\eta$, draw a policy $\pi\dist\eta$ and follow $\pi$. Induced distribution over $h$-step trajectories is denoted $\P^\eta$.
+    \item Need to concatenate policies; write $\pi\odot a$ for the policy executing $\pi$ and then choosing action $a$ afterwards. Similarly, if $\eta$ is a policy mixture and $\nu$ a distribution over $\A$, write $\eta\odot\nu$ for policy mixture equivalent to following a policy from $\eta$ and then sampling and following an action from $\nu$.
+\end{itemize}
+
+\begin{definition}[Maximum reaching probability]
+    For any $s\in\S$, its \definedword{maximum reaching probability} $\mu(s)$ is
+    \[
+        \mu(s)\defeq \max_\pi \P^\pi(s),
+    \]
+    where the maximum is taken over all map $\X_{[H]}\to\A$. The policy attaining the maximum for a given $s$ is denoted $\pi_s^*$.
+\end{definition}
+
+\begin{itemize}
+    \item WLOG assume all states are reachable, i.e. $\mu(s)>0$ for all $s$. Write $\mu_{\min} = \min_{s\in\S} \mu(s)$ for the $\mu(s)$-value of the hardest-to-reach-state. $\S$ is finite and all states are reachable so $\mu_{\min} > 0$.
+\end{itemize}
+
+\begin{definition}[Policy cover of state space]
+    Say a set of policies $\Pi_h$ is an \definedword{$\eps$-policy cover} of $\S_h$ if for all $s\in\S_h$ there is an $(h-1)$-step policy $\pi\in\Pi_h$ such that $\P^\pi(s)\geq\mu(s)-\eps$. A set of policies $\Pi$ is an \definedword{$\eps$-policy cover} of $\S$ if it is an $\eps$-policy cover of $\S_h$ for all $h\in [H+1]$. 
+\end{definition}
+
+\begin{itemize}
+    \item Seek policy cover of a small size (e.g. $\bigoh(\abs{S})$) and with small $\eps$. Then we can reach every state with the largest possible probability (up to $\eps$) by executing each policy in the cover in turn.
+\end{itemize}
+
+\section{Embedding approach}
+\begin{itemize}
+    \item Key challenge: lack of access to latent $s$. Here: learn a decoding function $f$ mapping contexts to latents.
+    \item Still a hard unsupervised learning problem unless we make strong assumptions about $\X_s$ or the emission distributions $q(\cdot\given s)$.
+    \item Instead: make separability assumptions about latent transition probabilities $p$.
+\end{itemize}
+
+\subsection{Embeddings and function approximation}
+\begin{itemize}
+    \item To construct $f$, learn low-dimensional representations of contexts and latents in a shared space $\Delta_{MK}$. Learn embeddings $g:\X\to\Delta_{MK}$ for contexts and $\phi:\S\to\Delta_{MK}$ for states, hoping that $g(x)$ and $\phi(s)$ should be close iff $x\in\X_s$.
+    \item Can construct $g$ and $\phi$ via an essentially supervised approach. State embedding $\phi$ is a low complexity object whereas $g$ has a high complexity, so limit $g$ to some class $\G\subseteq\set{\X\to\Delta_{MK}}$, e.g. generalised linear models, tree ensembles, neural nets etc.
+    \item Allowing a separate $g_h\in\G$ for each level we assume realizability:
+        \begin{definition}[Realizability]
+            For any $h\in [H+1]$ and $\phi:\S_h\to\Delta_{MK}$, there is $g_h\in\G$ such that $g_h(x)=\phi(s)$ for all $x\in\X_s$ and $s\in\S_h$.
+        \end{definition}
+        That is, $\G$ must be able to match any state-embedding function $\phi$ across all blocks $\X_s$.
+    \item Therefore consider classes $\G$ which are a composition $\phi'\circ f$ where $f$ is a decoding function from some class $\F\subseteq\set{\X\to\S}$ and $\phi'$ is any mapping $\S\to\Delta_{MK}$. Here $f$ decodes context $x$ to a state $f(x)$ which is then embedded by $\phi'$. The realizability assumption works if $\F$ contains a perfect decoding function $f^*$ s.t. $f^*(x)=s$ whenever $x\in\X_s$.
+    \item Given $\G$, want to find a suitable context-embedding function in $\G$ using a number of trajectories proportional to $\log\abs{\G}$ when $\G$ is finite, or some general notion of complexity when $\G$ is infinite. Here: assume $\G$ finite for ease.
+    \item Only need ability to solve least-squares problems, so assume we have access to an algorithm for solving vector-valued least-squares regression over $\G$:
+\end{itemize}
+
+\begin{definition}[ERM oracle]
+    Let $\G$ be a function class mapping $\X$ to $\Delta_{MK}$. An \definedword{empirical risk minimization oracle} for $\G$ is any algorithm that takes as input a data set $D=\set{(x_i,y_i)}_{i=1}^n$ with $x_i\in\X$, $y_i\in\Delta_{MK}$, and computes
+    \[
+        \argmin_{g\in\G} \sum_{(x,y)\in D} \norm{g(x)-y}^2.
+    \]
+\end{definition}
+
+\subsection{Backward probability vectors and separability}
+\begin{definition}[Backward probabilities]
+    Given a distribution $\nu$ over $(s_{h-1},a_{h-1})$, and for any $s\in\S_{h-1}$, $a\in\A$, and $s'\in\S_h$, the \definedword{backward probability} is
+    \[
+        b_\nu(s,a\given s') = \frac{ p(s'\given s,a) \nu(s,a) }{ \sum_{\tilde{s},\tilde{a}} p(s'\given\tilde{s},\tilde{a}) \nu(\tilde{s},\tilde{a}) }.
+    \]
+    For given $s'\in\S_h$, we collect the probabilities $b_\nu(s,a\given s')$ across all $s\in\S_{h-1}$, $a\in\A$ into the \definedword{backward probability vector} $b_v(s')\in\Delta_{MK}$, padding with zeroes if $\abs{\S_{h-1}} < M$.
+\end{definition}
+
+\begin{itemize}
+    \item At the core of the approach since they correspond to state embeddings $\phi(s)$ approximated by algorithms
+    \item Require that $b_v(s')$ for different states $s'\in\S_h$ be sufficiently separated from one another:
+\end{itemize}
+
+\begin{definition}[$\gamma$-separability]
+    There exists $\gamma>0$ such that for any $h\in\set{2,\dots,H+1}$ and any distinct $s',s''\in\S_h$, the backward probability vectors wrt the uniform distribution are separated by a margin of at least $\gamma$, i.e.
+    \[
+        \norm{b_v(s') - b_v(s'')}_1 \geq \gamma,
+    \]
+    where $\nu = U(\S_{h-1}\times\A)$.
+\end{definition}
+
+\begin{itemize}
+    \item Can be shown this assumption holds with $\gamma=2$ when latent-state transitions are deterministic, but class of $\gamma$-separable models is substantially larger
+    \item Why $b_v(s')$ useful? They arise as solutions to a specific least-squares problem wrt data generated by a policy whose marginal distribution over $(s_{h-1},a_{h-1})$ matches $\nu$.
+\end{itemize}
+
+\begin{theorem}
+    Let $e_{(s,a)}$ denote the vector of the standard basis in $\R^{MK}$ corresponding to $(s,a)\in\S_{h-1}\times\A$. Let $\nu$ be a distribution supported on $\S_{h-1}\times\A$ and $\tilde\nu$ be a distribution over $(s,a,x')$ defined by sampling $(s,a)\dist\nu$, $s'\dist p(\cdot\given s,a)$ and $x'\dist q(\cdot\given s')$. Let
+    \[
+        g_h \in \argmin_{g\in\G} \E_{\tilde\nu} \left[ \norm{g(x') - e_{(s,a)}}^2 \right].
+    \]
+    Then, assuming realizability, every minimizer $g_h$ satisfies $g_h(x')=b_v(s')$ for all $x'\in\X_{s'}$ and $s'\in\S_h$.
+\end{theorem}
+
+\begin{itemize}
+    \item $\tilde\nu$ is the marginal distribution induced by a policy whose marginal over $(s_{h-1},a_{h-1})$ matches $\nu$. Any minimizer $g_h$ yields context embeddings corresponding to state embeddings $\phi(s')=b_v(s')$.
+\end{itemize}
+
+\section{Algorithm for separable BMDPs}
+\begin{itemize}
+    \item Algo proceeds inductively level by level. For each level $h$, we learn
+        \begin{itemize}
+            \item the set of discovered latents $\hat{S}_h\subseteq [M]$ and a decoding function $\hat f_h : \X\to\hat\S_h$, letting us identify latent states at level $h$ from observed contexts;
+            \item the estimated transition probabilities $\hat p(\hat s_h \given \hat s_{h-1},a)$ across all $\hat s_{h-1}\in\hat\S_{h-1}$, $a\in\A$, $\hat s_h \in\hat S_h$;
+        \item a set of $(h-1)$-step policies $\Pi_h = \set{\pi_{\hat s}}_{\hat s\in\hat S_h}$
+        \end{itemize}
+\end{itemize}
+
+\begin{theorem}
+    There is a bijection $\alpha_h : \hat\S_h \to \S_h$ such that the following conditions are satisfied for all $\hat s\in\hat S_{h-1}$, $a\in\A$, $\hat s'\in\hat S_h$, and $s=\alpha_{h-1}(\hat s_{h-1})$, $s'=\alpha_h(\hat s')$, where $\alpha_{h-1}$ is the bijection for the previous level:
+    \begin{itemize}
+        \item Accuracy of $\hat f_h$: $\P_{x'\dist q(\cdot\given s')} \left[ \hat f_h(x') = \hat s'\right] \geq 1-\eps_f$;
+        \item Accuracy of $\hat p$:
+            \[
+                \sum_{\hat s''\in\hat S_h,\, s''=\alpha_h(\hat s'')} \abs{ \hat p(\hat s '' \given \hat s, a) - p(s'' \given s,a)} \leq \eps_p;
+            \]
+        \item Coverage by $\Pi_h$: $\P^{\pi_{\hat s'}} (s') \geq \mu(s')-\eps$.
+    \end{itemize}
+\end{theorem}
+
+PCID constructs these level by level. Given these objects up to level $h-1$, next construction proceeds via:
+\begin{enumerate}
+    \item Regression step: learn $\hat g_h$. Collect a dataset of trajectories by repeatedly following a policy mixture $\eta_h$. Use $\hat f_{h-1}$ to identify $\hat s_{h-1} = \hat{f}_{h-1}(x_{h-1})$ on each trajectory, getting samples $(\hat{s}_{h-1},a_{h-1},x_h)$ from $\tilde\nu$ induced by $\eta_h$. Context embedding $\hat{g}_h$ can then be obtained by solving the empirical version of
+        \[
+            \min_{g\in\G} \E_{\tilde\nu} \left[ \norm{g(x') - e_{(s,a)}}^2 \right].
+        \]
+        Choice of $\eta_h$ ensures each state $s_{h-1}$ is reached with probability at least $(\mu_{\min}-\eps)/M$, which is bounded away from zero for $\eps$ sufficiently small.
+    \item Clustering step: learn $\hat\phi$ and $\hat f_h$. We expect that $\hat g_h(x')\approx g_h(x')=b_\nu(s')$ for the distribution $\nu(\hat s_{h-1},a_{h-1})$ induced by $\eta_h$. So all contexts $x'$ from same state $s'$ have embedding vectors $\hat g_h(x')$ close to each other and to $b_\nu(s')$. By separability, we can therefore use clustering to identify all contexts generated by the same latent state, and this procedure is sample-efficient since the embeddings are low-dimensional vectors. Each cluster corresponds to some latent state $s'$ and any vector $\hat g_h(x')$ from that cluster can be used to define the state embedding $\hat\phi(s')$. The decoding function $\hat f_h$ is defined to map any context $x'$ to the state $s'$ whose embedding $\hat\phi(s')$ is the closest to $\hat g_h(x')$.
+    \item Dynamic programming: construct $\Pi_h$. Finally, since we can identify states at level $h$ via $\hat f_h$, we can use collected trajectories to learn an approximate transition model $\hat p(\hat{s}'\given\hat s,a)$ up to level $h$. Can therefore use DP to find policies that approximately optimise the probability of reaching any specific state $s'\in\S_h$. DP finds policies $\psi_{\hat{s}'}$ that act by directly observing decoded latent states. Policies $\pi_{\hat{s}'}$ are obtained by composing $\psi_{\hat{s}'}$ with decoding functions $\set{\hat f_l}_{l\in[h-1]}$.
+\end{enumerate}
+
+\begin{theorem}[Sample complexity]
+    Fix any $\eps = \bigoh\left(\frac{\mu_{\min}^3 \gamma}{M^4 K^3 H}\right)$ and failure probability $\delta>0$. Set
+    \begin{align*}
+        N_g & = \tilde\Omega\left(\frac{M^4 K^4 H \log\abs{\G}}{\eps\mu_{\min}^3\gamma^2} \right) \\
+            N_\phi & = \tilde\Theta\left(\frac{MK}{\mu_{\min}} \right) \\
+            N_p & = \tilde\Omega\left( \frac{M^2 KH^2}{\mu_{\min}\eps^2 } \right) \\
+            \tau & = \frac{\gamma}{30MK}.
+    \end{align*}
+    Then with probability at least $1-\delta$, PCID returns an $\eps$-policy cover of $\S$ with size at most $MH$.
+\end{theorem}
+
+Note the notation here suppresses factors polynomial in $\log M$, $\log K$, $\log H$ and $\log(1/\delta)$.
+
+
 
 
 \printbibliography
